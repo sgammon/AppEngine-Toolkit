@@ -1,0 +1,58 @@
+{% extends "core/base_web.html" %}
+
+{% block main %}
+
+<div id='welcome'>
+	<h1>Hello, world!</h1>
+	
+	<p>Welcome to your new, AppTools-powered App Engine app.</p>
+
+	<div id='debugtools'>
+		<p><b>Service tools</b>
+			<ul>
+				<li class='section'><a class='openclose opened' href='#servicetest'>Service Test</a>
+					<ul>
+						<li>Service.HelloWorld result: <pre>Hello, 127.0.0.1!</pre></li>
+					</ul>
+				</li>
+
+				<li class='section closed'><a class='openclose closed' href='#services'>Configured Services</a>
+					<ul class='collapsed'>
+						<li>Service One</li>
+					</ul>
+				</li>
+			</ul>
+
+		<p><b>Runtime information</b>
+			<ul>
+				<li class='section opened'><a class='openclose opened' href='#appinfo'>Application</a>
+					<ul class='expanded'>
+						<li>Name: {{ util.config.project.name }}</li>
+						<li>Version: {{ util.config.project.version.major }}.{{ util.config.project.version.minor }}.{{ util.config.project.version.micro }} {{ util.config.project.version.build }}</li>
+						<li>Debug Mode: {% if util.config.debug %}<span style='color: green'>{% else %}<span style='color: red'>{% endif %}{{ util.config.debug }}</span></li>
+					</ul>
+				</li>
+				<li class='section closed'><a class='openclose closed' href='#request'>Request</a>
+					<ul class='collapsed'>
+						<li>Hash: {{ util.request.hash }}</li>
+						<li>Namespace: {{ util.request.namespace }}</li>
+						<li>Datacenter: {{ util.appengine.datacenter }}</li>
+						<li>Instance: {{ util.appengine.instance }}</li>
+						<li>Backend: {{ util.appengine.backend }}</li>
+					</ul>
+				</li>
+				<li class='section closed'><a class='openclose closed' href='#request'>Environment</a>
+					<ul class='collapsed'>
+						{% for k, v in util.request.env.items() %}
+							<li>{{ k }}: {{ v }}</li>
+						{% endfor %}
+					</ul>
+				</li>
+			</ul>
+		</p>
+	</div>
+</div>
+
+
+
+{% endblock %}

@@ -1,0 +1,68 @@
+body {
+  font: 80% Verdana, sans-serif;
+  background: green;
+}
+
+h1 {
+  font: 48pt "Satisfy", cursive;
+  width: 100%;
+  text-align: center;
+  padding-top: 25px;
+}
+
+p {
+  margin: 15px 0;
+  padding: 5px 0;
+}
+
+#main {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+}
+
+#welcome {
+  background: white;
+  width: 32em;
+  margin: 5em auto;
+  padding: 0 0 0.5em 1em;
+  border-radius: 15px;
+  border: 4px solid blue;
+}
+
+#debugtools ul.collapsed {
+  display: none;
+}
+#debugtools ul.expanded {
+  display: visible;
+  background: #dddddd;
+}
+#debugtools ul.expanded li {
+  list-style: none;
+}
+#debugtools ul li.section {
+  padding-top: 3px;
+  padding-bottom: 3px;
+  margin-top: 3px;
+  margin-right: 3em;
+  margin-bottom: 3px;
+  list-style: none;
+  background: #dddddd;
+}
+#debugtools ul li.section.closed {
+  background: #bbbbbb;
+}
+#debugtools ul li.section a {
+  font-size: 90%;
+}
+#debugtools ul li.section a.openclose {
+  padding-left: 20px;
+}
+#debugtools ul li.section a.openclose.opened {
+  background: #dddddd url("/assets/img/static/icons/toggle-minus.png") no-repeat left bottom;
+}
+#debugtools ul li.section a.openclose.closed {
+  background: #bbbbbb url("/assets/img/static/icons/toggle-plus.png") no-repeat left bottom;
+}

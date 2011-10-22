@@ -1,0 +1,17 @@
+{% extends "core/__base.html" %}
+
+{% block body %}
+<div id="container">
+	{% block _wrapper %}
+	<header>
+		{% block header %}{% endblock %}
+	</header>
+	<div id="main" role="main">
+		{% block main %}{% endblock %}
+	</div>
+	<footer>
+		{% block footer %}{% endblock %}
+	</footer>
+	{% endblock _wrapper %}
+</div> <!--! end of #container -->
+{% endblock %}
