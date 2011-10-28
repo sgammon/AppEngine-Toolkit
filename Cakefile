@@ -98,9 +98,10 @@ out =
 	
 	
 ## Script Options
-option 'v', '--verbose', 'be loud about what\'s going on'
-option 'f', '--force', 'force dangerous operations to succeed'
-option 'c', '--config [STR]', 'path to project feature/skeleton config (defaults to \''+defaults.config+'\')'
+option 'v', '-verbose', 'be loud about what\'s going on'
+option 'f', '-force', 'force dangerous operations to succeed'
+option 'c', '-config [STR]', 'path to project feature/skeleton config (defaults to \''+defaults.config+'\')'
+option 's', '-skeleton [STR]', 'different skeleton branch to install (defaults to \'py27-base\')'
 
 
 ######### =======  Project Tools  ========== #########	
