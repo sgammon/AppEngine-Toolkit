@@ -6,11 +6,7 @@ app/
 .coverage
 .egg-info
 app/lib/dist
-var/downloads
 tests/
-var/eggs
-var/develop-eggs
-var/parts
 var/*.store
 *.svn
 .svn
