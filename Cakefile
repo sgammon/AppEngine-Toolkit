@@ -239,7 +239,7 @@ task 'project:bootstrap', 'generate a buildout executable', (options) =>
 		out.whisper data
 		
 	bootstrap_err = (data) =>
-		out.error data
+		out.error 'bootstrap', data
 
 	## Run bootstrap
 	out.say 'bootstrap', 'Executing bootstrap...'
