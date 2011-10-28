@@ -112,6 +112,13 @@ task 'init', 'start a new project and run the dev server', (options) =>
 	out.say 'install', 'Downloading project scaffolding...'
 	invoke 'scaffold'
 	
+	out.shout 'install', 'Installation complete.', true
+
+
+task 'make', 'download dependencies and prepare dev environment', (options) ->
+
+	out.shout 'make', 'Starting Envrionment Setup'
+
 	out.say 'install', 'Running bootstrap...'
 	invoke 'project:bootstrap'
 	
@@ -123,13 +130,6 @@ task 'init', 'start a new project and run the dev server', (options) =>
 	out.say 'install', 'Installing apptools...'
 	invoke 'update:apptools'
 	out.shout 'install', 'AppTools udpated.'
-		
-	out.shout 'install', 'Installation complete.', true
-
-
-task 'make', 'download dependencies and prepare dev environment', (options) ->
-
-	out.shout 'make', 'Starting Envrionment Setup'
 
 	out.say 'make', 'Running buildout...'
 	invoke 'project:buildout'
