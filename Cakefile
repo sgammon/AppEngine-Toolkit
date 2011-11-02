@@ -7,6 +7,7 @@ wrench = require 'wrench'
 defaults =
 	
 	output: '~/WorkspaceTest'
+	colorize: true
 	python: '/usr/bin/python2.7' ## python interpreter to use for buildout/bootstrap	
 	skeleton: 'py27-base' ## skeleton we're using (this should be the name of a branch available at gitsource.skeleton...)
 	gitsource:
@@ -29,7 +30,7 @@ out =
 
 	whisper: (message) ->
 		if message?
-			console.log message.toString()
+			console.log message.toString().replace('\n', "")
 
 	say: (module, message) ->
 		if message?
@@ -49,10 +50,10 @@ out =
 	error: (module, message, warning=true) ->
 		console.log ''
 		if warning
-			console.log @flags.wrap '[############### WARNING: '+module.toString()+' ###############]', @flags.red
+			console.log out.flags.wrap '[############### WARNING: '+module.toString()+' ###############]', out.flags.red
 			console.log message.toString()
 		else
-			console.log @flags.wrap('[############### ERROR: '+module.toString()+' ###############]', @flags.red)
+			console.log out.flags.wrap('[############### ERROR: '+module.toString()+' ###############]', out.flags.red)
 			console.log message.toString()
 		console.log ''
 		
@@ -111,8 +112,6 @@ task 'init', 'start a new project and run the dev server', (options) =>
 	
 	out.say 'install', 'Downloading project scaffolding...'
 	invoke 'scaffold'
-	
-	out.shout 'install', 'Installation complete.', true
 
 
 task 'make', 'download dependencies and prepare dev environment', (options) ->
@@ -174,10 +173,61 @@ task 'run', 'run fatcatmap\'s local dev server', (options) ->
 		out.shout 'devserver', 'Server exited with code '+code+'.'
 		
 	devserver_data = (data) =>
-		out.whisper data
-		
+
+		if defaults.colorize and not options.boring
+			data = data.toString().split(' ')
+			
+			go = (chunks, output, flag) =>
+				logline = []
+				endline = []
+				prefixfinish = false	
+
+				## Piece together output logline from split chunks
+				for chunk in chunks
+					chunk = chunk.toString()
+					if chunk in ['DEBUG', 'INFO', 'WARNING']
+						if flag isnt null
+							logline.push('['+out.flags.wrap(chunk, flag))
+						else
+							logline.push('['+chunk+']')
+					
+					else if chunk.length == 10 and chunk.split('-').length == 3
+						continue ## filter out today's date... people own clocks
+						
+					else if chunk.length == 12 and chunk.split(':').length == 3
+						continue ## filter out the timestamp for regular log messages
+						
+					else if /.py:/i.test(chunk) and chunk.split(':').length == 2
+						logline.push(out.flags.wrap(chunk, flag).replace(']', '')+']')
+						prefixfinish = true
+					
+					else if chunk in [' ', '', "\n"]
+						if prefixfinish
+							logline.push(chunk)
+						else
+							continue ## skip multiple spaces in the prefix
+					else
+						logline.push(chunk)
+				
+				## Assemble back into a string and output
+				output([logline.join(' '), endline.join(' ')].join(' '))
+			
+			goerror = (chunks, output) =>
+				output 'Runtime Error', chunks.join(' ')
+			
+			
+			switch data[0] ## should be log level severity, for log messages
+				when "DEBUG" then go data, out.whisper, out.flags.blue
+				when "INFO" then go data, out.whisper, out.flags.green
+				when "WARNING" then go data, out.whisper, out.flags.yellow
+				when "ERROR" then goerror data, out.error
+				when "CRITICAL" then goerror data, out.error
+				else out.whisper data
+		else
+			out.whisper data
+					
 	devserver_err = (data) =>
-		out.whisper data
+		devserver_data data
 
 	out.spawn 'devserver', (options.python || defaults.python), ['tools/bin/dev_appserver', 'app/'], devserver_done, devserver_data, devserver_err
 
@@ -215,6 +265,10 @@ task 'scaffold', 'download a skeleton from git and install it', (options) =>
 		wrench.chmodSyncRecursive(skeleton_dir, 0755);
 		out.say 'install', 'Installation complete at: app/'
 		out.shout 'skeleton', 'Finished skeleton installation.'
+
+		invoke 'update:gaelibs'
+		invoke 'update:apptools'
+		invoke 'project:bootstrap'
 	
 	gitdata = (data) =>
 	giterr = (data) =>
