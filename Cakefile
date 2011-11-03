@@ -8,6 +8,8 @@ defaults =
 	
 	output: '~/WorkspaceTest'
 	colorize: true
+	compass: true
+	coffee: false
 	python: '/usr/bin/python2.7' ## python interpreter to use for buildout/bootstrap	
 	skeleton: 'py27-base' ## skeleton we're using (this should be the name of a branch available at gitsource.skeleton...)
 	gitsource:
@@ -103,6 +105,8 @@ option 'v', '--verbose', 'be loud about what\'s going on'
 option 'f', '--force', 'force dangerous operations to succeed'
 option 'c', '--config [STR]', 'path to project feature/skeleton config (defaults to \''+defaults.config+'\')'
 option 's', '--skeleton [STR]', 'different skeleton branch to install (defaults to \'py27-base\')'
+option 'cm', '--compass', 'enable compass support, if it\'s set to off by default'
+option 'cs', '--coffee', 'enable coffeescript support, if it\'s set to off by default'
 
 
 ######### =======  Project Tools  ========== #########	
@@ -146,31 +150,48 @@ task 'bake', 'compile and minify all js, templates, and coffeescript', (options)
 
 	out.shout 'bake', 'Starting Compilation'
 
-	## 1) Compile everything first
-	out.say 'bake', 'Compiling SASS...'
-	invoke 'compile:sass'
+	## 1) Compile/minify SASS
+	if defaults.compass or options.compass
+		out.say 'bake', 'Compiling SASS...'
+		invoke 'compile:sass'
 
-	out.say 'bake', 'Compiling CoffeeScript...'
-	invoke 'compile:coffee'
+		out.say 'bake', 'Minifying SASS...'
+		invoke 'minify:sass'
+
+	## 2) Compile/minify Coffee
+	if defaults.coffee or options.coffee
+		out.say 'bake', 'Compiling CoffeeScript...'
+		invoke 'compile:coffee'
+
+		out.say 'bake', 'Minifying CoffeeScript...'
+		invoke 'minify:coffee'
 	
+	## 3) Jinja2 Templates
 	out.say 'bake', 'Compiling Jinja2 templates...'
 	invoke 'compile:templates'
-
-	out.say 'bake', 'Compiling SASS...'
-	invoke 'compile:sass'
-
-	## 3) Minify things
-	out.say 'bake', 'Minifying SASS...'
-	invoke 'minify:sass'
-
-	out.say 'bake', 'Minifying CoffeeScript...'
-	invoke 'minify:coffee'
 	
 
 task 'run', 'run fatcatmap\'s local dev server', (options) ->
 
 	devserver_done = (code) =>
 		out.shout 'devserver', 'Server exited with code '+code+'.'
+		
+	compass_done = (code) =>
+		out.shout 'compass', 'Compass exited with code '+code+'.'
+		
+	compass_data = (data) =>
+		data = data.toString().split(' ')
+
+		line = []
+		for i in data
+			if /.css/.test(i.toString())
+				line.push(i.toString())
+				out.whisper line.join(' ')
+				line = []
+			else
+				line.push(i.toString())
+				
+	compass_err = (data) =>
 		
 	devserver_data = (data) =>
 
@@ -230,6 +251,9 @@ task 'run', 'run fatcatmap\'s local dev server', (options) ->
 		devserver_data data
 
 	out.spawn 'devserver', (options.python || defaults.python), ['tools/bin/dev_appserver', 'app/'], devserver_done, devserver_data, devserver_err
+	if options.compass or defaults.compass
+		out.say 'compass', 'Compass support enabled. Watching.'
+		out.spawn 'compass', 'compass', ['watch'], compass_done, compass_data, compass_err
 
 
 task 'serve', 'deploy fatcatmap to appengine', (options) ->
@@ -243,7 +267,14 @@ task 'serve', 'deploy fatcatmap to appengine', (options) ->
 	appcfg_err = (data) =>
 		out.whisper data
 
-	out.spawn 'appcfg', 'bin/appcfg', ['upload', 'app'], appcfg_done, appcfg_data, appcfg_err
+	invoke 'compile:sass'
+	invoke 'compile:coffee'
+	invoke 'compile:templates'
+	
+	invoke 'minify:sass'
+	invoke 'minify:coffee'
+	
+	out.spawn 'appcfg', 'tools/bin/appcfg', ['upload', 'app'], appcfg_done, appcfg_data, appcfg_err
 	
 
 task 'clean', 'remove managed libraries (ndb, mapreduce, pipeline, everything in lib/dist), delete cached files (*.py[c|o], sass-cache, etc)', (option) ->
@@ -451,18 +482,171 @@ task 'clean:distlibs', 'clean buildout-managed libs from lib/dist', (options) ->
 		out.error 'clean', 'There was an error removing the current lib/dist. It probably doesn\'t exist.'
 	
 	out.shout 'clean', 'Distlib clean finished.'
+
+
+task 'clean:templates', 'clean compiled templates from app/templates/compiled', (options) ->
+
+	out.shout 'clean', 'Cleaning compiled templates.', true
 	
+	out.say 'clean', 'Removing app/templates/compiled...'
+	try
+		sk = fs.readdirSync __dirname+'/app/templates/compiled'
+		for file in sk
+			out.say 'clean', 'Cleaning ...compiled/'+file
+			try		
+				wrench.rmdirSyncRecursive __dirname+'/app/templates/compiled/'+file
+			catch error
+				try
+					fs.unlinkSync __dirname+'/app/templates/compiled/'+file
+				catch error
+					out.say 'clean', 'Clean error: '+error
+					out.error 'clean', 'There was an error removing: '+file
+				
+	catch error
+		out.say 'clean', 'Clean error: '+error
+		out.error 'clean', 'There was an error removing the current app/templates/compiled. It probably doesn\'t exist.'
+		
+	out.shout 'clean', 'Template clean finished.'
 
 
 ######## =======  Stylesheets/SASS & CoffeeScript  ========== ########
 task 'compile:sass', 'compile SASS to CSS', (options) ->
-	out.spawn 'compass compile'
+
+	out.shout 'compass', 'Compiling SASS', true
+	out.say 'compass', 'Compiling SASS to CSS...'
+	
+	compass_done = (code) =>
+		out.shout 'compass', 'SASS compilation complete.'
+		
+	compass_data = (data) =>
+		data = data.toString().split(' ')
+		
+		line = []
+		for i in data
+			if /.css/.test(i.toString())
+				line.push(i.toString())
+				out.whisper line.join(' ')
+				line = []
+			else
+				line.push(i.toString())
+		
+	compass_err = (data) =>
+	
+	out.spawn 'sass2css', 'compass', ['compile', '--force'], compass_done, compass_data, compass_err
+	
 
 task 'compile:coffee', 'compile js codebase', (options) ->
-	out.spawn 'bin/coffee2'
+	
+	total_ops = 0
+	total_done = 0
+	coffee_done = (code) =>
+		total_done = total_done + 1
+		if total_done == total_ops
+			out.shout 'coffee', 'CoffeeScript compilation complete.'
+
+	coffee_data = (data) =>
+		out.whisper data
+		
+	coffee_err = (data) =>
+		coffee_data(data)
+	
+	out.shout 'coffee', 'Compiling CoffeeScript...', true
+	out.say 'coffee', 'Compiling AppTools base...'
+
+	total_ops = total_ops + 1
+	out.spawn 'coffee', 'coffee', [ '--join', __dirname+'/app/assets/js/static/apptools/base.js',
+									'--compile', __dirname+'/app/assets/js/source/apptools/_core.coffee',
+									__dirname+'/app/assets/js/source/apptools/events.coffee',
+									__dirname+'/app/assets/js/source/apptools/user.coffee',
+									__dirname+'/app/assets/js/source/apptools/_init.coffee'], coffee_done, coffee_data, coffee_err
+									
+	out.say 'coffee', 'Compiling AppTools RPC...'
+	out.say 'coffee', 'Compiling AppTools Storage...'
+	
+	total_ops = total_ops + 1
+	out.spawn 'coffee', 'coffee', [ '--output', __dirname+'/app/assets/js/static/apptools',
+									'--compile', __dirname+'/app/assets/js/source/apptools/rpc.coffee',
+												__dirname+'/app/assets/js/source/apptools/storage.coffee'], coffee_done, coffee_data, coffee_err
+												
+	## ADD YER COFFEESCRIPTS HERE
+	
 
 task 'minify:sass', 'minify SASS into production-ready CSS', (options) ->
-	out.spawn 'compass compile --output-style compressed'
+
+	out.shout 'compass', 'Minifying CSS...', true
+	out.say 'compass', 'Recompiling SASS...'
+
+	compass_done = (code) =>
+		out.shout 'compass', 'CSS minification complete.'
+		
+	compass_data = (data) =>
+		data = data.toString().split(' ')
+		
+		line = []
+		for i in data
+			if /.css/.test(i.toString())
+				line.push(i.toString())
+				out.whisper line.join(' ')
+				line = []
+			else
+				line.push(i.toString())
+		
+	compass_err = (data) =>
+	
+	out.spawn 'sass2css', 'compass', ['compile', '--force', '--config', 'tools/config/compass_production.rb'], compass_done, compass_data, compass_err
+	
 
 task 'minify:coffee', 'minify js codebase', (options) ->
-	out.spawn 'bin/uglify'
+
+	total_ops = 0
+	total_done = 0
+	minify_done = (code) =>
+		total_done = total_done + 1
+		if total_done == total_ops
+			out.shout 'uglifyjs', 'JS minification complete.'
+	
+	minify_data = (data) =>
+		out.whisper data
+	
+	minify_err = (data) =>
+		coffee_data(data)
+
+	out.shout 'uglifyjs', 'Minifying JS...', true
+
+	files_to_minify = [
+	
+		["AppTools Base", __dirname+'/app/assets/js/static/apptools/base.min.js', __dirname+'/app/assets/js/static/apptools/base.js'],
+		["AppTools RPC", __dirname+'/app/assets/js/static/apptools/rpc.min.js', __dirname+'/app/assets/js/static/apptools/rpc.js'],
+		["AmplifyJS", __dirname+'/app/assets/js/static/core/amplify.min.js', __dirname+'/app/assets/js/static/core/amplify.js'],
+		["BackboneJS", __dirname+'/app/assets/js/static/core/backbone.min.js', __dirname+'/app/assets/js/static/core/backbone.js'],
+		["jQuery", __dirname+'/app/assets/js/static/core/jquery.min.js', __dirname+'/app/assets/js/static/core/jquery.js'],
+		["Lawnchair", __dirname+'/app/assets/js/static/core/lawnchair.min.js', __dirname+'/app/assets/js/static/core/lawnchair.js'],
+		["Modernizr", __dirname+'/app/assets/js/static/core/modernizr.min.js', __dirname+'/app/assets/js/static/core/modernizr.js']
+
+		## PUT YER FILES HERE FOR MINIFICATION
+
+	]
+
+	out.say 'uglifyjs', 'Minifying AppTools...'
+
+	for file in files_to_minify
+		total_ops = total_ops + 1
+		out.say 'uglifyjs', 'Minifying '+file[0]
+		out.spawn 'uglify', 'uglifyjs', ['-o', file[1], file[2]], minify_done, minify_data, minify_err
+	
+
+######## =======  Templates  ========== ########
+task 'compile:templates', 'compile jinja2 templates to python modules', (options) ->
+
+	out.say 'templates', 'Compiling Jinja2 templates...'
+	
+	compile_done = (code) =>
+		out.shout 'templates', 'Template compilation complete. Exited with code '+code+'.'
+		
+	compile_data = (data) =>
+		out.whisper data
+		
+	compile_err = (data) =>
+		compile_data(data)
+		
+	out.spawn 'jinja2compile', defaults.python || options.python, ['tools/bin/compile_templates'], compile_done, compile_data, compile_err

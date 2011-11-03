@@ -114,10 +114,12 @@ if __name__ == '__main__':
 	sourcepath = base+'/app/templates/source'
 	targetpath = base+'/app/templates/compiled'
 
-	print 'this is compiling all templates from: '+base+'/app/templates/source'
-	print 'to python code, packaged as modules in: '+base+'/app/templates/compiled'
-	print 'with a root templates module of: '+base+'/app/templates'
+	print "this is compiling all templates from: "+base+"/app/templates/source\n"
+	print "to python code, packaged as modules in: "+base+"/app/templates/compiled\n"
+	print "with a root templates module of: "+base+"/app/templates\n"
 
 	compile_dir(Environment(extensions=[autoescape]), sourcepath, targetpath, base_dir=module, as_module=True)
 	
-	print '..... finished :)'
+	print '\n..... finished :)\n'
+	
+	exit(0)
