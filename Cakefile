@@ -283,6 +283,8 @@ task 'clean', 'remove managed libraries (ndb, mapreduce, pipeline, everything in
 	
 	invoke 'clean:gaelibs'
 	invoke 'clean:distlibs'
+	invoke 'clean:templates'
+	invoke 'clean:apptools'
 
 
 task 'scaffold', 'download a skeleton from git and install it', (options) =>
@@ -484,6 +486,20 @@ task 'clean:distlibs', 'clean buildout-managed libs from lib/dist', (options) ->
 	out.shout 'clean', 'Distlib clean finished.'
 
 
+task 'clean:apptools', 'clean the currently installed version of the apptools library', (options) ->
+	
+	out.shout 'clean', 'Cleaning AppTools...', true
+	
+	out.say 'clean', 'Removing lib/apptools...'
+	try
+		wrench.rmdirSyncRecursive __dirname+'/app/lib/apptools'
+	catch error
+		out.say 'clean', 'Clean error: '+error
+		out.error 'clean', 'There was an error removing the current lib/apptools. It probably doesn\'t exist.'
+		
+	out.shout 'clean', 'AppTools clean complete.'
+
+
 task 'clean:templates', 'clean compiled templates from app/templates/compiled', (options) ->
 
 	out.shout 'clean', 'Cleaning compiled templates.', true
@@ -548,7 +564,7 @@ task 'compile:coffee', 'compile js codebase', (options) ->
 		out.whisper data
 		
 	coffee_err = (data) =>
-		coffee_data(data)
+		out.whisper data
 	
 	out.shout 'coffee', 'Compiling CoffeeScript...', true
 	out.say 'coffee', 'Compiling AppTools base...'
@@ -556,17 +572,13 @@ task 'compile:coffee', 'compile js codebase', (options) ->
 	total_ops = total_ops + 1
 	out.spawn 'coffee', 'coffee', [ '--join', __dirname+'/app/assets/js/static/apptools/base.js',
 									'--compile', __dirname+'/app/assets/js/source/apptools/_core.coffee',
+									__dirname+'/app/assets/js/source/apptools/agent.coffee',
 									__dirname+'/app/assets/js/source/apptools/events.coffee',
+									__dirname+'/app/assets/js/source/apptools/storage.coffee',
+									__dirname+'/app/assets/js/source/apptools/rpc.coffee',
 									__dirname+'/app/assets/js/source/apptools/user.coffee',
 									__dirname+'/app/assets/js/source/apptools/_init.coffee'], coffee_done, coffee_data, coffee_err
 									
-	out.say 'coffee', 'Compiling AppTools RPC...'
-	out.say 'coffee', 'Compiling AppTools Storage...'
-	
-	total_ops = total_ops + 1
-	out.spawn 'coffee', 'coffee', [ '--output', __dirname+'/app/assets/js/static/apptools',
-									'--compile', __dirname+'/app/assets/js/source/apptools/rpc.coffee',
-												__dirname+'/app/assets/js/source/apptools/storage.coffee'], coffee_done, coffee_data, coffee_err
 												
 	## ADD YER COFFEESCRIPTS HERE
 	
