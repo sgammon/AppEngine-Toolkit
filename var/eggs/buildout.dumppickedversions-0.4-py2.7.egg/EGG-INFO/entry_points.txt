@@ -1,0 +1,3 @@
+[zc.buildout.extension]
+default = buildout.dumppickedversions:install
+

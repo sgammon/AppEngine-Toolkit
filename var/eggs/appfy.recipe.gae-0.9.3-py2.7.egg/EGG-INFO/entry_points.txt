@@ -1,0 +1,6 @@
+[zc.buildout]
+default = appfy.recipe.gae.tools:Recipe
+tools = appfy.recipe.gae.tools:Recipe
+app_lib = appfy.recipe.gae.app_lib:Recipe
+sdk = appfy.recipe.gae.sdk:Recipe
+
