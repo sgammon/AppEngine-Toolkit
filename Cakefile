@@ -259,7 +259,7 @@ task 'run', 'run fatcatmap\'s local dev server', (options) ->
 	devserver_err = (data) =>
 		devserver_data data
 
-	out.spawn 'devserver', (options.python || defaults.python), ['tools\\bin\\dev_appserver', 'app/'], devserver_done, devserver_data, devserver_err
+	out.spawn 'devserver', (options.python || defaults.python), ['tools\\bin\\dev_appserver', 'app'], devserver_done, devserver_data, devserver_err
 	if options.compass or defaults.compass
 		out.say 'compass', 'Compass support enabled. Watching.'
 		out.spawn 'compass', 'compass', ['watch'], compass_done, compass_data, compass_err
