@@ -4,6 +4,8 @@ util = require 'util'
 wrench = require 'wrench'
 {exec, spawn} = require 'child_process'
 
+fixpath = (fragments...) =>
+	return path.normalize(path.join(fragments...))
 
 defaults =
 
@@ -11,7 +13,7 @@ defaults =
 	colorize: false
 	compass: true
 	coffee: false
-	python: 'C:\\Python27\\python' ## python interpreter to use for buildout\\bootstrap
+	python: 'python' ## python interpreter to use for buildout\\bootstrap
 	skeleton: 'py27-base' ## skeleton we're using (this should be the name of a branch available at gitsource.skeleton...)
 	gitsource:
 		apptools: 'git@github.com:sgammon/apptools.git' ## the core apptools library, with webapp/protorpc/ndb abstractions + utils
@@ -180,7 +182,7 @@ task 'bake', 'compile and minify all js, templates, and coffeescript', (options)
 	invoke 'compile:templates'
 
 
-task 'run', 'run fatcatmap\'s local dev server', (options) ->
+task 'run', 'run apptools\' local dev server', (options) ->
 
 	devserver_done = (code) =>
 		out.shout 'devserver', 'Server exited with code '+code+'.'
@@ -259,7 +261,7 @@ task 'run', 'run fatcatmap\'s local dev server', (options) ->
 	devserver_err = (data) =>
 		devserver_data data
 
-	out.spawn 'devserver', (options.python || defaults.python), ['tools\\bin\\dev_appserver', 'app'], devserver_done, devserver_data, devserver_err
+	out.spawn 'devserver', fixpath(__dirname, 'tools', 'bin', 'dev_appserver'), ['app'], devserver_done, devserver_data, devserver_err
 	if options.compass or defaults.compass
 		out.say 'compass', 'Compass support enabled. Watching.'
 		out.spawn 'compass', 'compass', ['watch'], compass_done, compass_data, compass_err
@@ -278,12 +280,13 @@ task 'serve', 'deploy fatcatmap to appengine', (options) ->
 
 	invoke 'compile:sass'
 	invoke 'compile:coffee'
+	invoke 'clean:templates'
 	invoke 'compile:templates'
 
 	invoke 'minify:sass'
 	invoke 'minify:coffee'
 
-	out.spawn 'appcfg', 'tools\\bin\\appcfg', ['upload', 'app'], appcfg_done, appcfg_data, appcfg_err
+	out.spawn 'appcfg', fixpath('tools', 'bin', 'appcfg'), ['update', 'app'], appcfg_done, appcfg_data, appcfg_err
 
 
 task 'clean', 'remove managed libraries (ndb, mapreduce, pipeline, everything in lib/dist), delete cached files (*.py[c|o], sass-cache, etc)', (option) ->
@@ -299,7 +302,7 @@ task 'clean', 'remove managed libraries (ndb, mapreduce, pipeline, everything in
 task 'scaffold', 'download a skeleton from git and install it', (options) =>
 
 	## 1: Copy skeleton over first
-	skeleton_dir = __dirname+'\\app'
+	skeleton_dir = fixpath(__dirname, 'app')
 	out.say 'skeleton', 'Cloning project skeleton...'
 	out.say 'skeleton', 'Target directory: "'+skeleton_dir+'".'
 
@@ -315,7 +318,7 @@ task 'scaffold', 'download a skeleton from git and install it', (options) =>
 	gitdata = (data) =>
 	giterr = (data) =>
 
-	gitclone = out.spawn 'gitclone', 'git', ['clone', '-b', options.skeleton || defaults.skeleton, defaults.gitsource.skeleton, '.\\app'], gitfinish, gitdata, giterr
+	gitclone = out.spawn 'gitclone', 'git', ['clone', '-b', options.skeleton || defaults.skeleton, defaults.gitsource.skeleton, 'app'], gitfinish, gitdata, giterr
 
 	gitclone.on 'exit', (code) =>
 		if code == 128
@@ -326,6 +329,9 @@ task 'scaffold', 'download a skeleton from git and install it', (options) =>
 
 ######## =======  Project Tools  ========== ########
 task 'project:bootstrap', 'generate a buildout executable', (options) =>
+
+	#f = fs.openSync(fixpath(__dirname, '.installed.cfg'), 'a+')
+	#fs.chmodSync(fixpath(__dirname, '.installed.cfg'), 0777)
 
 	bootstrap_done = () =>
 		out.say 'bootstrap', out.flags.wrap('Bootstrap complete.', out.flags.green)+' From now on, you can use `'+out.flags.wrap('cake make', out.flags.green)+'` to update dependencies.'
@@ -340,7 +346,7 @@ task 'project:bootstrap', 'generate a buildout executable', (options) =>
 
 	## Run bootstrap
 	out.say 'bootstrap', 'Executing bootstrap...'
-	out.spawn 'bootstrap', options.python || defaults.python, [__dirname+'\\tools\\bootstrap.py', '-c', __dirname+'/buildout.cfg', '--eggs', __dirname+'/var/eggs'], bootstrap_done, bootstrap_data, bootstrap_err
+	out.spawn 'bootstrap', options.python || defaults.python, [fixpath(__dirname, 'tools', 'bootstrap.py'), '-c', fixpath(__dirname, 'buildout.cfg'), '--eggs', fixpath(__dirname, '/var/eggs')], bootstrap_done, bootstrap_data, bootstrap_err
 
 
 task 'project:buildout', 'download and install GAE environment, supporting libraries, etc', (options) =>
@@ -354,7 +360,7 @@ task 'project:buildout', 'download and install GAE environment, supporting libra
 	buildout_err = (data) =>
 		out.error 'Buildout Error', data
 
-	out.spawn 'buildout', options.python || defaults.python, [__dirname+'\\tools\\bin\\buildout', '-c', __dirname+'\\buildout.cfg'], buildout_done, buildout_data, buildout_err
+	out.spawn 'buildout', fixpath(__dirname, "tools", "bin", "buildout"), ['-c', fixpath(__dirname, 'buildout.cfg')], buildout_done, buildout_data, buildout_err
 
 
 ######## =======  Libraries  ========== ########
@@ -368,37 +374,37 @@ task 'update:gaelibs', 'download and install GAE libraries, directly from source
 	out.shout 'update', 'Updating GAE libs...', true
 
 	out.say 'update', 'Updating NDB...'
-	out.spawn('ndbclone', 'hg', ['clone', 'https://appengine-ndb-experiment.googlecode.com/hg/', __dirname+'\\var\\parts\\ndb'], (code) =>
+	out.spawn('ndbclone', 'hg', ['clone', 'https://appengine-ndb-experiment.googlecode.com/hg/', fixpath(__dirname, 'var', 'parts', 'ndb')], (code) =>
 
 		out.say 'update:ndb', 'Download complete. Copying NDB to project.'
 
-		wrench.copyDirSyncRecursive __dirname+'\\var\\parts\\ndb\\ndb', __dirname+'\\app\\ndb'
+		wrench.copyDirSyncRecursive fixpath(__dirname, 'var', 'parts', 'ndb', 'ndb'), fixpath(__dirname, 'app', 'ndb')
 
 		out.shout 'update:ndb', 'NDB update complete.'
 		out.say 'update', 'Updating Map/Reduce...'
 
-		out.spawn('mrclone', 'svn', ['checkout', 'http://appengine-mapreduce.googlecode.com/svn/trunk/python/src', __dirname+'\\var\\parts\\mapreduce', '--force'], (code) =>
+		out.spawn('mrclone', 'svn', ['checkout', 'http://appengine-mapreduce.googlecode.com/svn/trunk/python/src', fixpath(__dirname, 'var', 'parts', 'mapreduce'), '--force'], (code) =>
 
 			## Copy to project
 			out.say 'update:mapreduce', 'Download complete. Copying Map/Reduce to project.'
-			wrench.copyDirSyncRecursive __dirname+'\\var\\parts\\mapreduce\\mapreduce', __dirname+'\\app\\mapreduce'
+			wrench.copyDirSyncRecursive fixpath(__dirname, 'var', 'parts', 'mapreduce', 'mapreduce'), fixpath(__dirname, 'app', 'mapreduce')
 
 			out.shout 'update:mapreduce', 'Map/Reduce update complete.'
 
 			out.say 'update', 'Updating Pipelines...'
-			out.spawn('pipelineclone', 'svn', ['checkout', 'http://appengine-pipeline.googlecode.com/svn/trunk/src', __dirname+'\\var\\parts\\pipelines', '--force'], (code) =>
+			out.spawn('pipelineclone', 'svn', ['checkout', 'http://appengine-pipeline.googlecode.com/svn/trunk/src', fixpath(__dirname, 'var', 'parts', 'pipelines'), '--force'], (code) =>
 
 				## Copy to project
 				out.say 'update:pipelines', 'Download complete. Copying Pipelines to project.'
-				wrench.copyDirSyncRecursive __dirname+'\\var\\parts\\pipelines\\pipeline', __dirname+'\\app\\pipeline'
+				wrench.copyDirSyncRecursive fixpath(__dirname, 'var', 'parts', 'pipelines', 'pipeline'), fixpath(__dirname, 'app', 'pipeline')
 
 				out.shout 'update:pipelines', 'Pipelines update complete.'
 
 
 				out.say 'update', 'Cleaning downloaded update parts...'
-				wrench.rmdirSyncRecursive __dirname+'\\var\\parts\\ndb'
-				wrench.rmdirSyncRecursive __dirname+'\\var\\parts\\mapreduce'
-				wrench.rmdirSyncRecursive __dirname+'\\var\\parts\\pipelines'
+				wrench.rmdirSyncRecursive fixpath(__dirname, 'var', 'parts', 'ndb')
+				wrench.rmdirSyncRecursive fixpath(__dirname, 'var', 'parts', 'mapreduce')
+				wrench.rmdirSyncRecursive fixpath(__dirname, 'var', 'parts', 'pipelines')
 
 				out.shout 'update', 'Update complete.', true
 
@@ -411,7 +417,7 @@ task 'update:gaelibs', 'download and install GAE libraries, directly from source
 task 'update:apptools', 'download and install apptools library', (options) ->
 
 	## 1: Copy skeleton over first
-	apptools_dir = __dirname+'\\app\\lib\\apptools'
+	apptools_dir = fixpath(__dirname, 'app', 'lib', 'apptools')
 	out.say 'apptools', 'Cloning apptools from git...'
 	out.say 'apptools', 'Target directory: "'+apptools_dir+'".'
 
@@ -426,7 +432,7 @@ task 'update:apptools', 'download and install apptools library', (options) ->
 	giterr = (data) =>
 		out.whisper data
 
-	gitclone = out.spawn 'gitclone', 'git', ['clone' , defaults.gitsource.apptools, '.\\app\\lib\\apptools'], gitfinish, gitdata, giterr
+	gitclone = out.spawn 'gitclone', 'git', ['clone' , defaults.gitsource.apptools, fixpath('app', 'lib', 'apptools')], gitfinish, gitdata, giterr
 
 	gitclone.on 'exit', (code) =>
 		if code == 128
@@ -434,6 +440,25 @@ task 'update:apptools', 'download and install apptools library', (options) ->
 		else
 			out.shout 'apptools:gitclone', 'Gitclone complete. Exited with code '+code+'.'
 
+
+task 'install:npmdeps', 'install all NPM/nodeJS dependencies', (options) ->
+
+	out.shout 'install', 'Installing node modules...', true
+
+	npmfinish = (code) =>
+		out.say 'install', 'NPM exited with code "' + code + '".'
+
+	npmdata = (data) =>
+		out.whisper data
+
+	npmerr = (error) =>
+		out.whisper error
+
+	out.say 'install', 'Installing wrench.'
+	out.spawn 'install', 'npm', ['install', 'wrench'], npmfinish, npmdata, npmerr
+
+	out.say 'install', 'Installing uglify.'
+	out.spawn 'install', 'npm', ['install', 'uglify-js'], npmfinish, npmdata, npmerr
 
 
 ## Clean Tasks
@@ -446,26 +471,26 @@ task 'clean:gaelibs', 'clean GAE libraries (ndb, pipelines, mapreduce & protorpc
 		mapreduce: 'Map/Reduce'
 		pipeline: 'Pipelines'
 
-	gaelibs_dir = __dirname+'\\app'
+	gaelibs_dir = fixpath(__dirname, 'app')
 
 	for lib of libs
 
 		out.say 'clean', 'Cleaning '+libs[lib]+'...'
 
-		lib_dir = gaelibs_dir+'\\'+lib
+		lib_dir = fixpath(gaelibs_dir, lib)
 
 		try
 			sk = fs.readdirSync lib_dir
 			for file in sk
 				if file != 'README.md'
 					try
-						fs.unlinkSync lib_dir+'\\'+file
-						out.say 'clean', 'Removed file "'+lib_dir+'\\'+file+'".' if options.verbose
+						fs.unlinkSync fixpath(lib_dir, file)
+						out.say 'clean', 'Removed file "'+fixpath(lib_dir, file)+'".' if options.verbose
 
 					catch error
 						try
-							wrench.rmdirSyncRecursive lib_dir+'\\'+file, (status) =>
-							out.say 'clean', 'Removed folder "'+lib_dir+'\\'+file+'".' if options.verbose
+							wrench.rmdirSyncRecursive fixpath(lib_dir, file), (status) =>
+							out.say 'clean', 'Removed folder "'+fixpath(lib_dir, file)+'".' if options.verbose
 						catch error
 							throw error
 
@@ -483,9 +508,9 @@ task 'clean:distlibs', 'clean buildout-managed libs from lib/dist', (options) ->
 
 	out.say 'clean', 'Removing lib/dist...'
 	try
-		wrench.rmdirSyncRecursive __dirname+'\\app\\lib\\dist'
+		wrench.rmdirSyncRecursive fixpath(__dirname, 'app', 'lib', 'dist')
 		out.say 'clean', 'Creating empty lib/dist...'
-		wrench.mkdirSyncRecursive __dirname+'\\app\\lib\\dist'
+		wrench.mkdirSyncRecursive fixpath(__dirname, 'app', 'lib', 'dist')
 	catch error
 		out.say 'clean', 'Clean error: '+error
 		out.error 'clean', 'There was an error removing the current lib/dist. It probably doesn\'t exist.'
@@ -499,7 +524,7 @@ task 'clean:apptools', 'clean the currently installed version of the apptools li
 
 	out.say 'clean', 'Removing lib/apptools...'
 	try
-		wrench.rmdirSyncRecursive __dirname+'\\app\\lib\\apptools'
+		wrench.rmdirSyncRecursive fixpath(__dirname, 'app', 'lib', 'apptools')
 	catch error
 		out.say 'clean', 'Clean error: '+error
 		out.error 'clean', 'There was an error removing the current lib/apptools. It probably doesn\'t exist.'
@@ -513,14 +538,14 @@ task 'clean:templates', 'clean compiled templates from app/templates/compiled', 
 
 	out.say 'clean', 'Removing app/templates/compiled...'
 	try
-		sk = fs.readdirSync __dirname+'\\app\\templates\\compiled'
+		sk = fs.readdirSync fixpath(__dirname, 'app', 'templates', 'compiled')
 		for file in sk
 			out.say 'clean', 'Cleaning ...compiled/'+file
 			try
-				wrench.rmdirSyncRecursive __dirname+'\\app\\templates\\compiled\\'+file
+				wrench.rmdirSyncRecursive fixpath(__dirname, 'app', 'templates', 'compiled', file)
 			catch error
 				try
-					fs.unlinkSync __dirname+'\\app\\templates\\compiled\\'+file
+					fs.unlinkSync fixpath(__dirname, 'app', 'templates', 'compiled', file)
 				catch error
 					out.say 'clean', 'Clean error: '+error
 					out.error 'clean', 'There was an error removing: '+file
@@ -577,21 +602,23 @@ task 'compile:coffee', 'compile js codebase', (options) ->
 	out.say 'coffee', 'Compiling AppTools base...'
 
 	total_ops = total_ops + 1
-	node_bin = 'C:\\Program Files (x86)\\nodejs\\node.exe'
-	coffee_bin = __dirname+'\\node_modules\\coffee-script\\bin\\coffee'
+	node_bin = 'node'
+	js_prefix = fixpath(__dirname, 'app', 'assets', 'js')
+	coffee_bin = fixpath(__dirname, 'node_modules', 'coffee-script', 'bin', 'coffee')
 	out.spawn 'coffee', node_bin, [ coffee_bin,
-									'--join', __dirname+'\\app\\assets\\js\\static\\apptools\\base.js',
-									'--compile', __dirname+'\\app\\assets\\js\\source\\apptools\\_milk.coffee',
-									__dirname+'\\app\\assets\\js\\source\\apptools\\_core.coffee',
-									__dirname+'\\app\\assets\\js\\source\\apptools\\dev.coffee',
-									__dirname+'\\app\\assets\\js\\source\\apptools\\events.coffee',
-									__dirname+'\\app\\assets\\js\\source\\apptools\\agent.coffee',
-									__dirname+'\\app\\assets\\js\\source\\apptools\\dispatch.coffee',
-									__dirname+'\\app\\assets\\js\\source\\apptools\\storage.coffee',
-									__dirname+'\\app\\assets\\js\\source\\apptools\\rpc.coffee',
-									__dirname+'\\app\\assets\\js\\source\\apptools\\user.coffee',
-									__dirname+'\\app\\assets\\js\\source\\apptools\\push.coffee',
-									__dirname+'\\app\\assets\\js\\source\\apptools\\_init.coffee']
+									'--join', fixpath(js_prefix, 'static', 'apptools', 'base.js'),
+									'--compile', fixpath(js_prefix, 'source', 'apptools', '_milk.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', '_core.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'dev.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'model.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'events.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'agent.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'dispatch.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'storage.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'rpc.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'user.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'push.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', '_init.coffee')]
 
 	out.say 'coffee', 'Done :)'
 
@@ -622,7 +649,7 @@ task 'minify:sass', 'minify SASS into production-ready CSS', (options) ->
 
 	compass_err = (data) =>
 
-	out.spawn 'sass2css', 'compass', ['compile', '--force', '--config', 'tools\\config\\compass_production.rb'], compass_done, compass_data, compass_err
+	out.spawn 'sass2css', 'compass', ['compile', '--force', '--config', fixpath('tools', 'config', 'compass_production.rb')], compass_done, compass_data, compass_err
 
 
 task 'minify:coffee', 'minify js codebase', (options) ->
@@ -638,18 +665,19 @@ task 'minify:coffee', 'minify js codebase', (options) ->
 		out.whisper data
 
 	minify_err = (data) =>
-		coffee_data(data)
+		minify_data(data)
 
 	out.shout 'uglifyjs', 'Minifying JS...', true
+	js_prefix = fixpath(__dirname, 'app', 'assets', 'js')
 
 	files_to_minify = [
 
-		["AppTools Base", __dirname+'\\app\\assets\\js\\static\\apptools\\base.min.js', __dirname+'\\app\\assets\\js\\static\\apptools\\base.js'],
-		["AmplifyJS", __dirname+'\\app\\assets\\js\\static\\core\\amplify.min.js', __dirname+'\\app\\assets\\js\\static\\core\\amplify.js'],
-		["BackboneJS", __dirname+'\\app\\assets\\js\\static\\core\\backbone.min.js', __dirname+'\\app\\assets\\js\\static\\core\\backbone.js'],
-		["jQuery", __dirname+'\\app\\assets\\js\\static\\core\\jquery.min.js', __dirname+'\\app\\assets\\js\\static\\core\\jquery.js'],
-		["Lawnchair", __dirname+'\\app\\assets\\js\\static\\core\\lawnchair.min.js', __dirname+'\\app\\assets\\js\\static\\core\\lawnchair.js'],
-		["Modernizr", __dirname+'\\app\\assets\\js\\static\\core\\modernizr.min.js', __dirname+'\\app\\assets\\js\\static\\core\\modernizr.js']
+		["AppTools Base", fixpath(js_prefix, 'static', 'apptools', 'base.min.js'), fixpath(js_prefix, 'static', 'apptools', 'base.js')],
+		["AmplifyJS", fixpath(js_prefix, 'static', 'core', 'amplify.min.js'), fixpath(js_prefix, 'static', 'core', 'amplify.js')],
+		["BackboneJS", fixpath(js_prefix, 'static', 'core', 'backbone.min.js'), fixpath(js_prefix, 'static', 'core', 'backbone.js')],
+		["jQuery", fixpath(js_prefix, 'static', 'core', 'jquery.min.js'), fixpath(js_prefix, 'static', 'core', 'jquery.js')],
+		["Lawnchair", fixpath(js_prefix, 'static', 'core', 'lawnchair.min.js'), fixpath(js_prefix, 'static', 'core', 'lawnchair.js')],
+		["Modernizr", fixpath(js_prefix, 'static', 'core', 'modernizr.min.js'), fixpath(js_prefix, 'static', 'core', 'modernizr.js')]
 
 		## PUT YER FILES HERE FOR MINIFICATION
 
@@ -659,8 +687,8 @@ task 'minify:coffee', 'minify js codebase', (options) ->
 
 	for file in files_to_minify
 		total_ops = total_ops + 1
-		out.say 'uglifyjs', 'Minifying '+file[0]
-		out.spawn 'uglify', 'uglifyjs', ['-o', file[1], file[2]], minify_done, minify_data, minify_err
+		out.say 'uglifyjs', 'Minifying '+file[0]+'...'
+		out.spawn 'uglify', 'node', [fixpath(__dirname, 'node_modules', 'uglify-js', 'bin', 'uglifyjs'), '-o', file[1], file[2]], minify_done, minify_data, minify_err
 
 
 ######## =======  Templates  ========== ########
@@ -677,4 +705,4 @@ task 'compile:templates', 'compile jinja2 templates to python modules', (options
 	compile_err = (data) =>
 		compile_data(data)
 
-	out.spawn 'jinja2compile', defaults.python || options.python, ['tools\\bin\\compile_templates'], compile_done, compile_data, compile_err
+	out.spawn 'jinja2compile', defaults.python || options.python, [fixpath('tools', 'bin', 'compile_templates')], compile_done, compile_data, compile_err

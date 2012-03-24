@@ -1,1 +1,0 @@
-logbook/_speedups.so

@@ -1,6 +1,0 @@
-[zc.buildout]
-default = z3c.recipe.scripts:Scripts
-interpreter = z3c.recipe.scripts:Interpreter
-scripts = z3c.recipe.scripts:Scripts
-script = z3c.recipe.scripts:Scripts
-
