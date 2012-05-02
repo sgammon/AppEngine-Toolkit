@@ -618,7 +618,32 @@ task 'compile:coffee', 'compile js codebase', (options) ->
 									fixpath(js_prefix, 'source', 'apptools', 'rpc.coffee'),
 									fixpath(js_prefix, 'source', 'apptools', 'user.coffee'),
 									fixpath(js_prefix, 'source', 'apptools', 'push.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'render.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'widgets', '_core.coffee'),
 									fixpath(js_prefix, 'source', 'apptools', '_init.coffee')]
+
+	out.spawn 'coffee', node_bin, [ coffee_bin,
+									'--join', fixpath(js_prefix, 'static', 'apptools', 'base.admin.js'),
+									'--compile', fixpath(js_prefix, 'source', 'apptools', '_milk.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', '_core.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'dev.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'model.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'events.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'agent.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'dispatch.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'storage.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'rpc.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'user.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'push.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'render.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'widgets', '_core.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'admin', '_core.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'admin', 'blog.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'admin', 'page.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'admin', 'site.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', 'admin', 'content.coffee'),
+									fixpath(js_prefix, 'source', 'apptools', '_init.coffee')]
+
 
 	out.say 'coffee', 'Done :)'
 
@@ -673,6 +698,7 @@ task 'minify:coffee', 'minify js codebase', (options) ->
 	files_to_minify = [
 
 		["AppTools Base", fixpath(js_prefix, 'static', 'apptools', 'base.min.js'), fixpath(js_prefix, 'static', 'apptools', 'base.js')],
+		["AppTools Admin", fixpath(js_prefix, 'static', 'apptools', 'base.min.js'), fixpath(js_prefix, 'static', 'apptools', 'admin.js')],
 		["AmplifyJS", fixpath(js_prefix, 'static', 'core', 'amplify.min.js'), fixpath(js_prefix, 'static', 'core', 'amplify.js')],
 		["BackboneJS", fixpath(js_prefix, 'static', 'core', 'backbone.min.js'), fixpath(js_prefix, 'static', 'core', 'backbone.js')],
 		["jQuery", fixpath(js_prefix, 'static', 'core', 'jquery.min.js'), fixpath(js_prefix, 'static', 'core', 'jquery.js')],
