@@ -698,7 +698,7 @@ task 'minify:coffee', 'minify js codebase', (options) ->
 	files_to_minify = [
 
 		["AppTools Base", fixpath(js_prefix, 'static', 'apptools', 'base.min.js'), fixpath(js_prefix, 'static', 'apptools', 'base.js')],
-		["AppTools Admin", fixpath(js_prefix, 'static', 'apptools', 'base.min.js'), fixpath(js_prefix, 'static', 'apptools', 'admin.js')],
+		["AppTools Admin", fixpath(js_prefix, 'static', 'apptools', 'base.admin.min.js'), fixpath(js_prefix, 'static', 'apptools', 'base.admin.js')],
 		["AmplifyJS", fixpath(js_prefix, 'static', 'core', 'amplify.min.js'), fixpath(js_prefix, 'static', 'core', 'amplify.js')],
 		["BackboneJS", fixpath(js_prefix, 'static', 'core', 'backbone.min.js'), fixpath(js_prefix, 'static', 'core', 'backbone.js')],
 		["jQuery", fixpath(js_prefix, 'static', 'core', 'jquery.min.js'), fixpath(js_prefix, 'static', 'core', 'jquery.js')],
