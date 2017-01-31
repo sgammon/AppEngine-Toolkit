@@ -23,12 +23,12 @@ defaults =
 out =
 
 	flags:
-		header: '\033[95m'
-		blue: '\033[94m'
-		green: '\033[92m'
-		yellow: '\033[93m'
-		red: '\033[91m'
-		end: '\033[0m'
+		header: ''
+		blue: ''
+		green: ''
+		yellow: ''
+		red: ''
+		end: ''
 
 		wrap: (message, flag) ->
 			if defaults.colorize
